@@ -1,0 +1,86 @@
+import { NextRequest, NextResponse } from "next/server";
+import CloudinaryAPI from "@/utils/cloudinary/api";
+import {
+  getProduct,
+  getProducts,
+  updateProduct,
+  uploadProduct,
+} from "@/utils/supabase/api";
+import slugify from "slugify";
+import { formatZodErrors } from "@/utils/zod/formatErrors";
+import z from "zod";
+import { formDataToObject } from "@/utils/utils";
+
+export const updateProductSchema = z.object({
+  title: z.string().min(1, "Title is required").optional(),
+  slug: z.string().min(1, "Slug is required").optional(),
+  description: z.string().min(1, "Description is required").optional(),
+  images: z
+    .array(z.instanceof(File))
+    .min(1, "At least one image is required")
+    .optional(),
+  portrait: z.instanceof(File).optional(),
+  price: z.number().min(1, "Price is required").optional(),
+  collection: z.string().min(1, "Collection is required").optional(),
+  featured: z.boolean().optional(),
+});
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const product = await getProduct(id);
+    return NextResponse.json(product, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const formData = await req.formData();
+
+    const updatedFields = formDataToObject(formData);
+
+    // Validación con Zod
+    const parsedFromData = updateProductSchema.safeParse({
+      ...updatedFields,
+    });
+
+    if (!parsedFromData.success) {
+      const erroresTraducidos = formatZodErrors(parsedFromData.error);
+      return NextResponse.json({ message: erroresTraducidos }, { status: 400 });
+    }
+
+    if (parsedFromData.data.images) {
+      const uploadedImages = await CloudinaryAPI.UpdateImages(
+        parsedFromData.data.images,
+        id
+      );
+      parsedFromData.data.images = uploadedImages;
+    }
+
+    if (parsedFromData.data.portrait) {
+      const uploadedPortrait = await CloudinaryAPI.UploadPortrait(
+        parsedFromData.data.portrait,
+        id
+      );
+      parsedFromData.data.portrait = uploadedPortrait;
+    }
+
+    if (parsedFromData.data.title) {
+      const slug = slugify(parsedFromData.data.title, { lower: true });
+      parsedFromData.data.slug = slug;
+    }
+
+    return NextResponse.json(parsedFromData, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message }, { status: 500 });
+  }
+}

@@ -1,31 +1,20 @@
-import CloudinaryAPI from "@/lib/cloudinary/api";
-import { getProducts, uploadProduct } from "@/lib/supabase/products";
-import { formatZodErrors } from "@/utils/zod/formatErrors";
 import { NextRequest, NextResponse } from "next/server";
+import { productSchema } from "../route";
+import CloudinaryAPI from "@/utils/cloudinary/api";
+import { updateProduct, uploadProduct } from "@/utils/supabase/api";
 import slugify from "slugify";
-import z from "zod";
+import { formatZodErrors } from "@/utils/zod/formatErrors";
 
-export const productSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  images: z.array(z.instanceof(File)).min(1, "At least one image is required"),
-  portrait: z.instanceof(File),
-  price: z.number().min(1, "Price is required"),
-  collection: z.string().min(1, "Collection is required"),
-  featured: z.boolean(),
-});
-
-export async function GET() {
-  const products = await getProducts();
-  return NextResponse.json(products, { status: 200 });
-}
-
-export async function POST(req: NextRequest) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const formData = await req.formData();
 
-    // Extract form data
     const title = formData.get("title") as string;
+    const slug = slugify(title, { lower: true });
     const description = formData.get("description") as string;
     const images = formData.getAll("images") as File[];
     const portrait = formData.get("portrait") as File;
@@ -33,10 +22,7 @@ export async function POST(req: NextRequest) {
     const collection = formData.get("collection") as string;
     const featured = formData.get("featured") === "true";
 
-    // Generate slug
-    const slug = slugify(title, { lower: true });
-
-    // Validate form data
+    // Validación con Zod
     const parsed = productSchema.safeParse({
       title,
       description,
@@ -52,15 +38,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: erroresTraducidos }, { status: 400 });
     }
 
-    // Upload images
+    // Subir imágenes a Cloudinary (igual que en POST)
     const urls = await CloudinaryAPI.UploadProductFiles({
       images,
       portrait,
       slug,
     });
 
-    // Create typed Product
-    const product = {
+    const updatedProduct = {
       title,
       slug,
       description,
@@ -71,8 +56,8 @@ export async function POST(req: NextRequest) {
       featured,
     };
 
-    // Upload product to Supabase
-    const data = await uploadProduct(product);
+    // Actualizar en Supabase
+    const data = await updateProduct(updatedProduct, id);
 
     return NextResponse.json(data, { status: 200 });
   } catch (error: any) {

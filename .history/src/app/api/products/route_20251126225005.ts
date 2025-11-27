@@ -1,5 +1,5 @@
-import CloudinaryAPI from "@/lib/cloudinary/api";
-import { getProducts, uploadProduct } from "@/lib/supabase/products";
+import CloudinaryAPI from "@/utils/cloudinary/api";
+import { getProducts, uploadProduct } from "@/utils/supabase/api";
 import { formatZodErrors } from "@/utils/zod/formatErrors";
 import { NextRequest, NextResponse } from "next/server";
 import slugify from "slugify";
