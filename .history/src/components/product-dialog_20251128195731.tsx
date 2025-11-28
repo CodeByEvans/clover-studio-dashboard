@@ -249,14 +249,7 @@ export function ProductDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-t-transparent rounded-full"></span>
-                  Creando...
-                </div>
-              ) : (
-                "Crear Producto"
-              )}
+              {isLoading ? "Guardando..." : "Guardar"}
             </Button>
           </DialogFooter>
         </form>
