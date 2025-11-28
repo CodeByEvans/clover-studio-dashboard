@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       title,
       slug,
       description,
-      images: [urls.portrait, urls.images],
+      images: [urls.portrait, ...urls.images],
       portrait: urls.portrait,
       price,
       collection,
