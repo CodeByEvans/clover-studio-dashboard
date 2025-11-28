@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, ImageIcon } from "lucide-react";
 import {
   Card,
@@ -11,15 +11,20 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProductDialog } from "./product-dialog";
-import {
-  ProductFormData,
-  type Product,
-  type Products,
-} from "@/types/product.type";
+import { type Products } from "@/types/product.type";
+import { productAPI } from "@/services/api";
 
 export function Products() {
   const [products, setProducts] = useState<Products>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const products = await productAPI.getProducts();
+      setProducts(products);
+    };
+    fetchProducts();
+  }, []);
 
   const handleDeleteProduct = (id: number) => {
     setProducts(products.filter((p) => p.id !== id));
@@ -45,7 +50,11 @@ export function Products() {
         </Button>
       </div>
 
-      <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ProductDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        setProducts={setProducts}
+      />
 
       {products.length === 0 ? (
         <Card>
