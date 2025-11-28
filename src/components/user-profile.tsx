@@ -12,22 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { authAPI } from "@/services/api";
 
 export function UserProfile() {
   const router = useRouter();
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    const auth = localStorage.getItem("clover_auth");
-    if (auth) {
-      const parsed = JSON.parse(auth);
-      setEmail(parsed.email);
-    }
+    authAPI.getUser().then((user) => setEmail(user.user.email));
   }, []);
-
   const handleLogout = () => {
-    localStorage.removeItem("clover_auth");
-    router.push("/auth");
+    authAPI.logout().then(() => router.push("/"));
   };
 
   const getInitials = (email: string) => {
