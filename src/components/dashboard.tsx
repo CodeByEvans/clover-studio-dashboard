@@ -1,13 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Users, Package, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserProfile } from "./user-profile";
-import { Products } from "./products";
+import { ProductsSection } from "./productsSection";
+import { Products } from "@/types/product.type";
+import { collectionAPI } from "@/services/api";
 
 export function Dashboard() {
   const [activeSection, setActiveSection] = useState("overview");
+  const [products, setProducts] = useState<Products>([]);
+  const [collections, setCollections] = useState([]);
+
+  const activeProducts = products.filter((p) => p.active);
+
+  const latestProducts = [...products]
+    .sort(
+      (a, b) =>
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    )
+    .slice(0, 3);
+
+  useEffect(() => {
+    const fetchCollections = async () => {
+      const collections = await collectionAPI.getCollections();
+      setCollections(collections);
+    };
+
+    fetchCollections();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -26,51 +48,79 @@ export function Dashboard() {
 
       {/* Quick stats */}
       <div className="grid gap-4 md:grid-cols-3">
+        {/* Total Productos */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
               Total Productos
             </CardTitle>
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="flex flex-col gap-1">
+            <span className="text-2xl font-bold">{products.length}</span>
+            <span className="text-xs text-muted-foreground">
               Productos en el sistema
-            </p>
+            </span>
           </CardContent>
         </Card>
 
+        {/* Activos */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Activos</CardTitle>
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Productos activos</p>
+          <CardContent className="flex flex-col gap-1">
+            <span className="text-2xl font-bold">{activeProducts.length}</span>
+            <span className="text-xs text-muted-foreground">
+              Productos activos
+            </span>
           </CardContent>
         </Card>
 
+        {/* Últimas actualizaciones */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
               Últimas actualizaciones
             </CardTitle>
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground">
-              Gestiona tus productos
-            </p>
+          <CardContent className="flex flex-col gap-2">
+            {latestProducts.length === 0 ? (
+              <span className="text-xs text-muted-foreground">
+                No hay actualizaciones
+              </span>
+            ) : (
+              latestProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="flex flex-col text-xs text-muted-foreground"
+                >
+                  <span className="font-medium text-foreground">
+                    {product.title}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {new Date(product.updated_at).toLocaleDateString("es-ES", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Products section */}
       <div>
-        <Products />
+        <ProductsSection
+          products={products}
+          setProducts={setProducts}
+          collections={collections}
+        />
       </div>
     </div>
   );
