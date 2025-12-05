@@ -3,7 +3,7 @@ import { Collection } from "./collection.type";
 export type Products = Product[];
 
 export type Product = {
-  id: number;
+  id: string;
   title: string;
   slug: string;
   description: string;
