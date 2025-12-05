@@ -143,6 +143,30 @@ export const CloudinaryAPI = {
     }
     return reordered;
   },
+  CanDeleteImages: async (productSlug: string) => {
+    try {
+      const result = await cloudinary.api.resources({
+        type: "upload",
+        prefix: `products/${productSlug}`,
+      });
+
+      const hasResources = result.resources.length > 0;
+      return hasResources;
+    } catch (error) {
+      console.log("Error inspecting resources:", error);
+      return false;
+    }
+  },
+  DeleteImages: async (productSlug: string) => {
+    try {
+      await cloudinary.api.delete_resources_by_prefix(
+        `products/${productSlug}`
+      );
+      await cloudinary.api.delete_folder(`products/${productSlug}`);
+    } catch (error) {
+      console.log("Error trying to delete images:", error);
+    }
+  },
 };
 
 export default CloudinaryAPI;
