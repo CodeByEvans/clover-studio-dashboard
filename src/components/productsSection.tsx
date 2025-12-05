@@ -14,6 +14,7 @@ import { ProductDialog } from "./product-dialog";
 import { type Products } from "@/types/product.type";
 import { productAPI } from "@/services/api";
 import { Collections } from "@/types/collection.type";
+import DeleteDialog from "./DeleteDialog";
 
 interface ProductsSectionProps {
   products: Products;
@@ -26,7 +27,9 @@ export function ProductsSection({
   collections,
   setProducts,
 }: ProductsSectionProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string>("");
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -36,8 +39,9 @@ export function ProductsSection({
     fetchProducts();
   }, []);
 
-  const handleDeleteProduct = (id: number) => {
-    setProducts(products.filter((p) => p.id !== id));
+  const openDeleteDialog = async (id: string) => {
+    setProductToDelete(id);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -51,7 +55,7 @@ export function ProductsSection({
         </div>
         <Button
           onClick={() => {
-            setDialogOpen(true);
+            setAddDialogOpen(true);
           }}
           className="gap-2"
         >
@@ -61,10 +65,17 @@ export function ProductsSection({
       </div>
 
       <ProductDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
         setProducts={setProducts}
         collections={collections}
+      />
+
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        id={productToDelete}
+        setProducts={setProducts}
       />
 
       {products.length === 0 ? (
@@ -79,7 +90,7 @@ export function ProductsSection({
             </p>
             <Button
               onClick={() => {
-                setDialogOpen(true);
+                setAddDialogOpen(true);
               }}
               variant="outline"
             >
@@ -111,6 +122,17 @@ export function ProductsSection({
               <CardContent className="space-y-4">
                 <div className="text-2xl font-bold text-primary">
                   €{product.price.toFixed(2)}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => openDeleteDialog(product.id)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Eliminar
+                  </Button>
                 </div>
               </CardContent>
             </Card>
