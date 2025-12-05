@@ -28,6 +28,14 @@ export const productAPI = {
       throw error.response;
     }
   },
+  deleteProduct: async (id: string) => {
+    try {
+      const response = await api.delete(`/products/${id}`);
+      return response.data;
+    } catch (error: any) {
+      throw error.response;
+    }
+  },
 };
 
 // Collection API
