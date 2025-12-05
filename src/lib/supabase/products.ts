@@ -18,7 +18,7 @@ export const getProducts = async (): Promise<Products> => {
   return data;
 };
 
-export const getProduct = async (id: number): Promise<Product> => {
+export const getProduct = async (id: string): Promise<Product> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("products")
@@ -51,6 +51,19 @@ export const updateProduct = async (
   const { data, error } = await supabase
     .from("products")
     .update(updatedProduct)
+    .eq("id", id)
+    .select();
+
+  if (error) throw error;
+
+  return data;
+};
+
+export const deleteProduct = async (id: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .delete()
     .eq("id", id)
     .select();
 
