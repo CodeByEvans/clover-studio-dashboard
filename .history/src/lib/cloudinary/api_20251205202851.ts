@@ -1,0 +1,172 @@
+import { envs } from "@/config/server-envs";
+import { v2 as cloudinary } from "cloudinary";
+
+cloudinary.config({
+  cloud_name: envs.cloudinaryCloudName,
+  api_key: envs.cloudinaryApiKey,
+  api_secret: envs.cloudinaryApiSecret,
+  secure: true,
+});
+
+export const CloudinaryAPI = {
+  UploadProductFiles: async ({
+    images,
+    portrait,
+    slug,
+  }: {
+    images: File[];
+    portrait: File;
+    slug: string;
+  }) => {
+    // Subida de imágenes normales
+    const imagesUploads = images.map(async (image, index) => {
+      const buffer = Buffer.from(await image.arrayBuffer());
+
+      const result = await new Promise<any>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: `products/${slug}`,
+            public_id: `${slug}-${index + 1}`,
+            resource_type: "image",
+          },
+          (error, uploadResult) => {
+            if (error) return reject(error);
+            resolve(uploadResult);
+          }
+        );
+        stream.end(buffer);
+      });
+
+      return result.secure_url;
+    });
+
+    // Subida de la portrait en carpeta separada
+    const portraitUpload = (async () => {
+      const buffer = Buffer.from(await portrait.arrayBuffer());
+      const result = await new Promise<any>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: `products/${slug}`,
+            public_id: `${slug}-portrait`,
+            resource_type: "image",
+          },
+          (error, uploadResult) => {
+            if (error) return reject(error);
+            resolve(uploadResult);
+          }
+        );
+        stream.end(buffer);
+      });
+      return result.secure_url;
+    })();
+
+    // Esperamos todas las imágenes + portrait
+    const uploadedImages = await Promise.all(imagesUploads);
+    const uploadedPortrait = await portraitUpload;
+
+    return {
+      images: uploadedImages,
+      portrait: uploadedPortrait,
+    };
+  },
+  UploadImages: async (
+    newImages: File[],
+    oldImages: string[],
+    slug: string
+  ) => {
+    const reordered: string[] = [];
+    for (let i = 0; i < oldImages.length; i++) {
+      const url = oldImages[i];
+      const newPublicId = `${slug}-${i + 1}`;
+      const result = await cloudinary.uploader.rename(url, newPublicId, {
+        overwrite: true,
+      });
+      reordered.push(result.secure_url);
+    }
+    const uploadedImages = await Promise.all(
+      newImages.map(async (image, index) => {
+        const buffer = Buffer.from(await image.arrayBuffer());
+        const result = await new Promise<any>((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: `products/${slug}`,
+              public_id: `${slug}-${index + reordered.length + 1}`,
+              resource_type: "image",
+            },
+            (error, uploadResult) => {
+              if (error) return reject(error);
+              resolve(uploadResult);
+            }
+          );
+          stream.end(buffer);
+        });
+        return result.secure_url;
+      })
+    );
+    return [...reordered, ...uploadedImages];
+  },
+  UpdatePortrait: async (portrait: File | string, slug: string) => {
+    let buffer: Buffer;
+    if (typeof portrait === "string") {
+      const response = await fetch(portrait);
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } else {
+      buffer = Buffer.from(await portrait.arrayBuffer());
+    }
+    const result = await new Promise<any>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: `products/portraits/${slug}`,
+          public_id: `${slug}-portrait`,
+          resource_type: "image",
+        },
+        (error, uploadResult) => {
+          if (error) return reject(error);
+          resolve(uploadResult);
+        }
+      );
+      stream.end(buffer);
+    });
+    return result.secure_url;
+  },
+  ReorderImages: async (images: string[], slug: string) => {
+    const reordered: string[] = [];
+    for (let i = 0; i < images.length; i++) {
+      const url = images[i];
+      // extrae public_id actual y reemplaza con slug-{i+1}
+      const newPublicId = `${slug}-${i + 1}`;
+      const result = await cloudinary.uploader.rename(url, newPublicId, {
+        overwrite: true,
+      });
+      reordered.push(result.secure_url);
+    }
+    return reordered;
+  },
+  CanDeleteImages: async (productSlug: string) => {
+    try {
+      const result = await cloudinary.api.resources({
+        type: "upload",
+        prefix: `products/${productSlug}`,
+      });
+
+      const hasResources = result.resources.length > 0;
+      return hasResources;
+    } catch (error) {
+      console.log("Error inspecting resources:", error);
+      return false;
+    }
+  },
+  DeleteImages: async (productSlug: string) => {
+    try {
+      await cloudinary.api.delete_resources_by_prefix(
+        `products/${productSlug}`
+      );
+      await cloudinary.api.delete_folder(`products/${productSlug}`);
+    } catch (error) {
+      console.log("Error trying to delete images:", error);
+    }
+  },
+};
+
+export default CloudinaryAPI;
